@@ -1,36 +1,45 @@
-from machine import Pin, ADC, RTC
+from machine import Pin, RTC
 from time import sleep
 import config
 import network
 import urequests
 import ubinascii
 import sys
-import ujson
+import dht
+
+sensor = dht.DHT22(Pin(5))
 
 #get the MAC Address used to validate in the API
 DEVICE_ADDRESS = ubinascii.hexlify(network.WLAN().config('mac'),':').decode()
-
-battery_pin = ADC(config.BATTERY)
-voltaje_pin = Pin(config.VOLTAJE_STATUS, Pin.IN)
-
+sensor.measure()
+humedad = sensor.humidity()
+temperatura= sensor.temperature()
+def get_temp():
+    sensor.measure()
+    return sensor.temperature()
+def get_hum():
+    sensor.measure()
+    return sensor.humidity()
 def send_data():
-    json = {
-            "unic_id": str(DEVICE_ADDRESS),
-            "values":[
-                {
-                    "value": get_battery_status(),
-                    "alias": "bateria"
-                },
-                {
-                    "value": get_voltaje_status(),
-                    "alias": "estado"
-                }
-            ]
-        }
     print(config.API_URL)
+    print(DEVICE_ADDRESS)
+    json = {
+        "unic_id": str(DEVICE_ADDRESS),
+        "values":[
+            {
+                "value": get_temp(),
+                "alias": "temperatura"
+            },
+            {
+                "value": get_hum(),
+                "alias": "humedad"
+            }
+        ]
+    }
+    print(json)
     req = urequests.post(
-        config.API_URL,
-        json=json,
+        'http://smc-fcal.duckdns.org/api/store-data',
+        json = json,
         headers={'Content-Type': 'application/json'}
     )
     print("STATUS CODE")
@@ -54,14 +63,6 @@ def connect_wifi():
             sleep(1)
     print('Network config:', sta_if.ifconfig())
 
-def get_battery_status():
-    """Return the aproximate value of battery load TODO:(The formula need improvements)"""
-    raw_value = battery_pin.read()
-    return (round(((raw_value - 806) * 100) / 218))
-
-def get_voltaje_status():
-    return 1 if voltaje_pin.value() else 0
-
 def deepsleep():
     """
     Routine for suspend the device and wake up after DSL_INTERVAL
@@ -71,17 +72,20 @@ def deepsleep():
     rtc.alarm(rtc.ALARM0, config.SLEEP_INTERVAL * 1000)
     machine.deepsleep()
 
-
 def run():
-    try:
-        connect_wifi()
-        print('running')
-        send_data()
-        print('going to sleep zzzz...')
-        deepsleep()
-    except Exception as exc:
-        sys.print_exception(exc)
-        sleep(10)
-    
+    while True:
+        try:
+            connect_wifi()
+            print('running')
+            try:
+                send_data()
+                print('going to sleep zzzz...')
+                # deepsleep()
+            except OSError as err:
+                print (err)
+                continue
+        except Exception as exc:
+            sys.print_exception(exc)
+        sleep(config.SLEEP_INTERVAL)
 
 run()

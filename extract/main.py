@@ -14,7 +14,10 @@ battery_pin = ADC(config.BATTERY)
 voltaje_pin = Pin(config.VOLTAJE_STATUS, Pin.IN)
 
 def send_data():
-    json = {
+    print(config.API_URL)
+    req = urequests.post(
+        config.API_URL,
+        json = {
             "unic_id": str(DEVICE_ADDRESS),
             "values":[
                 {
@@ -26,13 +29,7 @@ def send_data():
                     "alias": "estado"
                 }
             ]
-        }
-    print(config.API_URL)
-    req = urequests.post(
-        config.API_URL,
-        json=json,
-        headers={'Content-Type': 'application/json'}
-    )
+    })
     print("STATUS CODE")
     print(req.status_code)
     print(req.text)
