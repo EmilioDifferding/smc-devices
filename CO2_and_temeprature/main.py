@@ -1,6 +1,8 @@
 from machine import Pin, ADC
 from time import sleep
 import config
+import ds18x20
+import onewire
 import network
 import urequests
 import sys
@@ -34,6 +36,12 @@ def get_Read (co2Pin):
 def get_percentaje (v):
     return pow(10, (v - ZERO_POINT_VOLTAGE) / ( (REACTION_VOLTAGE) / (LOG_400 - LOG_2000) ) + LOG_400)
 
+def get_temperature(sensor):
+    wires = sensor.scan()
+    sensor.convert_temp()
+    sleep(1)
+    return round(sensor.read_temp(wires[0]), 2)
+
 def connect_wifi():
     ap_if = network.WLAN(network.AP_IF)
     ap_if.active(False)
@@ -47,7 +55,7 @@ def connect_wifi():
     print('Network config:', sta_if.ifconfig())
 
 
-def send_data(percentaje, volts, raw):
+def send_data(percentaje, volts, raw, temperature):
     json={
             "unic_id" : str(DEVICE_ADDRESS),
             "values" : [
@@ -62,6 +70,10 @@ def send_data(percentaje, volts, raw):
                 {
                     'value': volts,
                     'alias': 'volts'
+                },
+                {
+                    'value': temperature,
+                    'alias': 'temperatura'
                 }
             ]
         }
@@ -81,6 +93,7 @@ def send_data(percentaje, volts, raw):
         raise RuntimeError('Webhook failed')
 
 def run():
+    sensor = ds18x20.DS18X20(onewire.OneWire(Pin(config.temperature_sensor_pin)))
     while True:
         connect_wifi()
         read = get_Read(co2Pin)
@@ -90,8 +103,10 @@ def run():
         print('ADC {}'.format(raw))
         percentage = round(get_percentaje(volts),1)
         print('CO2: {} ppm'.format(percentage))
+        temperature = get_temperature(sensor)
+        print('Temperature: {}'.format(temperature))
         try:
-            send_data(percentage, volts, raw)
+            send_data(percentage, volts, raw, temperature)
         except OSError as err:
             print(err)
             sleep(5)

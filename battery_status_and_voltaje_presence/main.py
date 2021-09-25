@@ -10,7 +10,7 @@ import ujson
 #get the MAC Address used to validate in the API
 DEVICE_ADDRESS = ubinascii.hexlify(network.WLAN().config('mac'),':').decode()
 
-battery_pin = ADC(config.BATTERY)
+battery_pin = ADC(0)
 voltaje_pin = Pin(config.VOLTAJE_STATUS, Pin.IN)
 
 def send_data():
@@ -72,16 +72,27 @@ def deepsleep():
     machine.deepsleep()
 
 
+# def run():
+#     try:
+#         connect_wifi()
+#         print('running')
+#         send_data()
+#         print('going to sleep zzzz...')
+#         deepsleep()
+#     except Exception as exc:
+#         print(exc)
+#         sleep(10)
+
 def run():
-    try:
+    while True:
         connect_wifi()
-        print('running')
-        send_data()
-        print('going to sleep zzzz...')
-        deepsleep()
-    except Exception as exc:
-        sys.print_exception(exc)
-        sleep(10)
-    
+        try:
+            send_data()
+            print("sleeping...")
+            deepsleep()
+        except OSError as err:
+            print(err)
+            sleep(10)
+            continue
 
 run()

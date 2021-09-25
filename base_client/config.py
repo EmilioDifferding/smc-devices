@@ -6,8 +6,4 @@ WIFI_PASSWORD = 'eiVaWutieb9eiy0De2ae'
 API_URL = "http://smc-fcal.duckdns.org/api/store-data"
 # API_URL = "https://api.monitoreo-sensores.fcal.uner.edu.ar/api/store-data"
 
-SLEEP_INTERVAL = 3600 #interval for deep Sleep mode in seconds
-
-# Input pins
-BATTERY = 0
-VOLTAJE_STATUS = 5
+SLEEP_INTERVAL = 30 #interval for deep Sleep mode in minutes
